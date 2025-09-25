@@ -13,6 +13,7 @@ load("//tools/bazeldefs:platforms.bzl", _default_platform = "default_platform", 
 load("//tools/bazeldefs:tags.bzl", _go_suffixes = "go_suffixes", _local_test_tags = "local_test_tags")
 load("//tools/go_marshal:defs.bzl", "go_marshal", "marshal_deps", "marshal_test_deps")
 load("//tools/go_stateify:defs.bzl", "go_stateify")
+load("//tools/go_tool:defs.bzl", "go_tool")
 load("//tools/nogo:defs.bzl", "nogo_test")
 
 # Core rules.
@@ -138,8 +139,11 @@ def go_imports(name, src, out):
         name = name,
         srcs = [src],
         outs = [out],
-        tools = ["@org_golang_x_tools//cmd/goimports:goimports", "@go_sdk//:go"],
-        cmd = ("export PATH=$(dirname $(location @go_sdk//:go)):$PATH && $(location @org_golang_x_tools//cmd/goimports:goimports) $(SRCS) > $@"),
+        tools = [
+            "@org_golang_x_tools//cmd/goimports:goimports",
+            "//tools/go_tool:go",
+        ],
+        cmd = ("export PATH=$$(dirname $(execpath //tools/go_tool:go)):$$PATH && $(execpath @org_golang_x_tools//cmd/goimports:goimports) $(SRCS) > $@"),
     )
 
 def go_library(name, srcs, deps = [], imports = [], stateify = True, force_add_state_pkg = False, marshal = False, marshal_debug = False, nogo = True, **kwargs):
@@ -188,11 +192,6 @@ def go_library(name, srcs, deps = [], imports = [], stateify = True, force_add_s
                 srcs = src_subset,
                 imports = imports,
                 package = full_pkg,
-                out = name + suffix + "_state_autogen_with_imports.go",
-            )
-            go_imports(
-                name = name + suffix + "_state_autogen",
-                src = name + suffix + "_state_autogen_with_imports.go",
                 out = name + suffix + "_state_autogen.go",
             )
         all_srcs = all_srcs + [
